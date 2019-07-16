@@ -5,8 +5,11 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -79,7 +82,7 @@ public class VimeoCotroller {
 	//授权码模式
 	@RequestMapping(value = "/cliendCode", produces = {"application/json;charset=UTF-8"})
 	@ResponseBody
-	public String getCodeMode(@RequestParam String uricode) throws IOException {
+	public String getCodeMode(@RequestParam String uricode, HttpServletRequest request) throws IOException {
 		//客户端的id
 		String client_id = "5f90a0518d7ab04ec4d9b1e414c6c3bdc084b6d6";
 		//客户端的密钥
@@ -109,29 +112,33 @@ public class VimeoCotroller {
 		//客户端返回结果
 		CloseableHttpResponse closeableHttpResponse = closeableHttpClient.execute(httpPost);
 
-		String toString = new JSONObject(EntityUtils.toString(closeableHttpResponse.getEntity())).toString();
-		System.out.println("返回的数据" + toString);
+		JSONObject jsonObject = new JSONObject(EntityUtils.toString(closeableHttpResponse.getEntity()));
 
-		String uplocal = uplocal(new JSONObject(toString));
+		String toString = jsonObject.get("access_token").toString();
+		System.out.println("返回的数据----//有包含token " + toString);
+		//拿到令牌放在sesion
+		HttpSession session = request.getSession();
+		session.setAttribute("access_token", toString);
+
+		String uplocal = uplocal(toString);
 		System.out.println("返回的的上传的数据是\t" + uplocal);
 		JSONObject tempJSONObject = new JSONObject(uplocal);
 
-		JSONObject jsonObject = tempJSONObject.getJSONObject("upload");
-//		String form = jsonObject.get("form").toString();
-		System.out.println("返回的form 表单的数据是\t" + jsonObject.toString());
+		JSONObject jsonObjectUpload = tempJSONObject.getJSONObject("upload");
 
-		return jsonObject.toString();
+		System.out.println("返回的form 表单的数据是\t" + jsonObjectUpload.toString());
+		return jsonObjectUpload.toString();
 
 	}
 
-	public String uplocal(JSONObject jsono) throws UnsupportedEncodingException, IOException {
+	public String uplocal(String access_token) throws UnsupportedEncodingException, IOException {
 
 		//json对象封装json数据用的
 		JSONObject json = new JSONObject();
 		JSONObject json2 = new JSONObject();
 		//解析json 拿到key的值
-		String access_token = jsono.get("access_token").toString();
-		System.out.println("access_token\t" + access_token);
+//		String access_token = jsono.get("access_token").toString();
+		System.out.println("access_token授权码模式传过来的是\t" + access_token);
 		String uri = "https://api.vimeo.com/me/videos";
 		//创建post 的请求
 		HttpPost post = new HttpPost(uri);
@@ -157,6 +164,36 @@ public class VimeoCotroller {
 		String strEntity = new JSONObject(EntityUtils.toString(executeResponse.getEntity())).toString();
 		System.out.println("下载之后响应" + strEntity);
 		return strEntity;
+
+	}
+
+	@RequestMapping(value = "/delete")
+	public String deleteVideos(HttpServletRequest request) throws IOException {
+		String accessToken = request.getSession().getAttribute("access_token").toString();
+		System.out.println("从sesion拿出来的令牌\t" + accessToken);
+		//要删除的视频id 
+		
+		String idString = "347262582";
+		String uri = "https://api.vimeo.com/videos/" + idString;
+
+		HttpDelete delete = new HttpDelete(uri);
+		delete.setHeader("Authorization","bearer " + accessToken);
+		CloseableHttpClient createDefault = HttpClients.createDefault();
+		//	抛异常
+		CloseableHttpResponse executeResponse = createDefault.execute(delete);
+		String str;
+		JSONObject jsonObjectDelete;
+		try {
+			 jsonObjectDelete = new JSONObject(EntityUtils.toString(executeResponse.getEntity()));
+			
+		
+		
+		} catch (IllegalArgumentException e) {
+			return "删除成功";
+		}
+		
+		
+		return jsonObjectDelete.toString();
 
 	}
 

@@ -11,7 +11,7 @@ $(document).ready(function () {
 				response_type=code&\n\
 				client_id=" + clent_id + "&\n\
 				redirect_uri=" + redirect_uri + "&\n\
-				state=1" + "&scope=upload");
+				state=1" + "&scope=upload delete");
 
 
 	});
@@ -37,4 +37,14 @@ $(document).ready(function () {
 		});
 
 	});
+	$("#btn2").click(function () {
+		
+		$.get("/delete",function(data){
+			
+			alert(data);
+		},"text");
+		
+	});
+	
+	
 });
